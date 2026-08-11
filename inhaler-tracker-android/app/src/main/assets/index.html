@@ -1,0 +1,1197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#0F7B78">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Inhaler Tracker</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect fill='%230F7B78' width='64' height='64' rx='14'/%3E%3Cg fill='white'%3E%3Crect x='26' y='10' width='12' height='24' rx='4'/%3E%3Crect x='18' y='34' width='30' height='12' rx='5'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EFF4F3; --card:#FFFFFF; --ink:#16302D; --sub:#5C6E6B; --line:#DCE6E4;
+  --track:#E2EBE9; --teal:#0F7B78; --teal-ink:#0A5A58; --teal-soft:#E3F0EF;
+  --warn:#9A6215; --warn-bg:#F7ECD9; --danger:#B0442F; --danger-bg:#F6E3DE;
+  --shadow:0 1px 2px rgba(22,48,45,.06),0 6px 18px rgba(22,48,45,.06);
+  --r:18px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0F1716; --card:#17221F; --ink:#E8F1EF; --sub:#94A7A3; --line:#243330;
+    --track:#223330; --teal:#2FA39E; --teal-ink:#7ED4CF; --teal-soft:#14312E;
+    --warn:#D9A04B; --warn-bg:#33270F; --danger:#E07B63; --danger-bg:#3A1D15;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 22px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  padding:0 14px calc(28px + env(safe-area-inset-bottom));
+  -webkit-tap-highlight-color:transparent;
+}
+.wrap{max-width:540px;margin:0 auto}
+h1,h2,h3,.ringnum b,.btn{font-family:"Space Grotesk",system-ui,sans-serif}
+
+/* header */
+.hdr{display:flex;align-items:center;gap:12px;padding:20px 2px 14px}
+.hdr svg{width:42px;height:42px;flex:none}
+.hdr h1{margin:0;font-size:22px;letter-spacing:-.01em}
+.hdr .tag{margin:2px 0 0;color:var(--sub);font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+
+/* notes & banner */
+.note{background:var(--warn-bg);color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 30%,transparent);
+  border-radius:12px;padding:10px 12px;font-size:14px;margin:0 0 12px}
+.hidden{display:none}
+.due{background:var(--teal-soft);border:1px solid color-mix(in srgb,var(--teal) 35%,transparent);
+  border-left:5px solid var(--teal);border-radius:14px;padding:12px;margin:0 0 14px;
+  display:flex;flex-wrap:wrap;gap:10px;align-items:center;animation:pulse 2.4s ease-in-out infinite}
+.due-txt{flex:1 1 200px;font-size:15px}
+.due-btns{display:flex;gap:8px}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--teal) 25%,transparent)}50%{box-shadow:0 0 0 7px transparent}}
+@media (prefers-reduced-motion:reduce){.due{animation:none}.meter{transition:none!important}.toast{transition:none}}
+
+/* cards */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--shadow);padding:16px;margin:0 0 16px}
+.card-top{display:flex;align-items:flex-start;gap:10px}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--ac,#0F7B78);margin-top:6px;flex:none}
+.card-title{flex:1;min-width:0}
+.card-title h2{margin:0;font-size:19px;letter-spacing:-.01em;overflow-wrap:anywhere}
+.card-title p{margin:2px 0 0;color:var(--sub);font-size:13.5px}
+.menu-wrap{position:relative;flex:none}
+.iconbtn{background:none;border:none;color:var(--sub);font-size:22px;line-height:1;
+  padding:4px 10px;border-radius:10px;cursor:pointer}
+.iconbtn:hover{background:var(--track)}
+.menu{position:absolute;right:0;top:36px;background:var(--card);border:1px solid var(--line);
+  border-radius:12px;box-shadow:var(--shadow);min-width:180px;z-index:20;overflow:hidden}
+.menu button{display:block;width:100%;text-align:left;background:none;border:none;
+  padding:11px 14px;font-size:15px;color:var(--ink);cursor:pointer}
+.menu button:hover{background:var(--track)}
+.menu .mdanger{color:var(--danger)}
+
+.card-mid{display:flex;gap:16px;align-items:center;margin:14px 0 4px}
+.ringbox{position:relative;width:116px;flex:none;text-align:center}
+.ring{width:116px;height:116px;transform:rotate(-90deg)}
+.ring .track{fill:none;stroke:var(--track);stroke-width:9}
+.ring .meter{fill:none;stroke-width:9;stroke-linecap:round;transition:stroke-dashoffset .5s ease}
+.ring.ok .meter{stroke:var(--teal)}
+.ring.warn .meter{stroke:var(--warn)}
+.ring.danger .meter{stroke:var(--danger)}
+.ringnum{position:absolute;inset:0 0 18px;display:flex;flex-direction:column;justify-content:center;align-items:center;pointer-events:none}
+.ringnum b{font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
+.ringnum span{font-size:11px;color:var(--sub);letter-spacing:.08em;text-transform:uppercase}
+.ringof{font-size:12px;color:var(--sub);margin-top:-14px}
+.stats{flex:1;min-width:0;margin:0;display:grid;gap:7px}
+.stats div{display:grid;grid-template-columns:76px 1fr;gap:8px;align-items:baseline}
+.stats dt{color:var(--sub);font-size:12px;letter-spacing:.05em;text-transform:uppercase}
+.stats dd{margin:0;font-size:14.5px;overflow-wrap:anywhere}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 2px}
+.chip{font-size:13px;padding:5px 11px;border-radius:999px}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.danger{background:var(--danger-bg);color:var(--danger)}
+
+.card-actions{display:flex;gap:10px;margin:12px 0 4px}
+.card-actions .primary{flex:1}
+
+/* buttons */
+.btn{border:none;border-radius:12px;padding:12px 16px;font-size:15.5px;font-weight:600;
+  cursor:pointer;letter-spacing:.01em}
+.btn.primary{background:var(--teal);color:#fff}
+.btn.primary:active{background:var(--teal-ink)}
+.btn.ghost{background:transparent;color:var(--teal);border:1.5px solid color-mix(in srgb,var(--teal) 45%,transparent)}
+.btn.ghost:active{background:var(--teal-soft)}
+.btn.dangerbtn{background:var(--danger);color:#fff}
+.btn.mini{padding:8px 12px;font-size:14px;border-radius:10px}
+.btn.big{width:100%;padding:15px;font-size:17px;margin:2px 0 18px}
+button:focus-visible,input:focus-visible,textarea:focus-visible,.hist-toggle:focus-visible{
+  outline:2.5px solid var(--teal);outline-offset:2px}
+
+/* reminders */
+.rem-block{border-top:1px dashed var(--line);margin-top:12px;padding-top:12px}
+.switch{display:inline-flex;align-items:center;gap:10px;font-size:15px;font-weight:600;cursor:pointer}
+.switch input{position:absolute;opacity:0;width:0;height:0}
+.switch span{width:42px;height:24px;border-radius:999px;background:var(--track);position:relative;transition:background .2s;flex:none}
+.switch span::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;
+  background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .2s}
+.switch input:checked + span{background:var(--teal)}
+.switch input:checked + span::after{left:21px}
+.switch input:focus-visible + span{outline:2.5px solid var(--teal);outline-offset:2px}
+.times{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.tchip{display:inline-flex;align-items:center;gap:6px;background:var(--teal-soft);color:var(--teal-ink);
+  border-radius:999px;padding:6px 6px 6px 12px;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.tchip button{background:none;border:none;color:inherit;font-size:16px;cursor:pointer;
+  padding:2px 8px;border-radius:999px;line-height:1}
+.tchip button:hover{background:color-mix(in srgb,var(--teal) 18%,transparent)}
+.addtime{display:inline-flex;gap:6px;align-items:center}
+.addtime input{border:1.5px solid var(--line);border-radius:10px;padding:7px 9px;font-size:14px;
+  background:var(--card);color:var(--ink)}
+.nextrem{margin:9px 0 0;color:var(--sub);font-size:13.5px}
+
+/* history */
+.hist-toggle{display:block;width:100%;background:none;border:none;border-top:1px dashed var(--line);
+  margin-top:12px;padding:11px 0 2px;color:var(--sub);font-size:14px;cursor:pointer;text-align:left}
+.history{margin-top:6px}
+.hgroup{margin:10px 0 4px}
+.hhead{display:flex;justify-content:space-between;font-size:12.5px;color:var(--sub);
+  letter-spacing:.05em;text-transform:uppercase;border-bottom:1px solid var(--line);padding-bottom:4px}
+.hrow{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+.hrow .ht{color:var(--sub);font-size:13.5px;width:58px;flex:none;font-variant-numeric:tabular-nums}
+.hrow .hp{font-size:14.5px;font-weight:600}
+.hrow .hn{color:var(--sub);font-size:13px;flex:1;min-width:0;overflow-wrap:anywhere}
+.hrow .hx{margin-left:auto;background:none;border:none;color:var(--sub);font-size:18px;
+  cursor:pointer;padding:2px 9px;border-radius:8px}
+.hrow .hx:hover{background:var(--danger-bg);color:var(--danger)}
+.hrow.refill .hp{color:var(--teal)}
+.empty-log{color:var(--sub);font-size:14px;margin:8px 0 2px}
+
+/* empty state */
+.empty{border:2px dashed var(--line);border-radius:var(--r);padding:34px 22px;text-align:center;margin:6px 0 16px}
+.empty svg{width:60px;height:60px;fill:var(--teal);opacity:.85}
+.empty h2{margin:12px 0 6px;font-size:19px}
+.empty p{margin:0;color:var(--sub);font-size:14.5px}
+
+/* tools & footer */
+.tools{display:flex;flex-wrap:wrap;gap:9px;margin:2px 0 18px}
+.tools .btn{padding:9px 13px;font-size:14px}
+.foot{color:var(--sub);font-size:12.5px;border-top:1px solid var(--line);padding-top:14px}
+.foot p{margin:0 0 6px}
+
+/* dialogs */
+dialog.dlg{border:none;border-radius:20px;background:var(--card);color:var(--ink);
+  box-shadow:0 18px 50px rgba(0,0,0,.3);padding:20px;width:min(94vw,430px);margin:auto}
+dialog.dlg::backdrop{background:rgba(10,25,23,.45);backdrop-filter:blur(2px)}
+dialog h3{margin:0 0 14px;font-size:19px}
+.field{display:block;margin:0 0 12px;font-size:13px;color:var(--sub);font-weight:600;
+  letter-spacing:.03em;text-transform:uppercase}
+.field input,.field textarea{display:block;width:100%;margin-top:5px;border:1.5px solid var(--line);
+  border-radius:11px;padding:11px 12px;font:15.5px/1.4 system-ui,sans-serif;background:var(--bg);
+  color:var(--ink);text-transform:none;letter-spacing:0;font-weight:400}
+.field small{display:block;margin-top:4px;font-weight:400;text-transform:none;letter-spacing:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.swatches{display:flex;gap:9px;margin-top:6px}
+.sw{cursor:pointer}
+.sw input{position:absolute;opacity:0;width:0;height:0}
+.sw span{display:block;width:30px;height:30px;border-radius:50%;border:3px solid transparent}
+.sw input:checked + span{border-color:var(--ink);box-shadow:0 0 0 2px var(--card) inset}
+.sw input:focus-visible + span{outline:2.5px solid var(--teal);outline-offset:2px}
+.hint{font-size:13px;color:var(--sub);margin:2px 0 12px}
+.dlg-btns{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
+
+/* toast */
+#toastHost{position:fixed;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;z-index:60}
+.toast{background:var(--ink);color:var(--bg);border-radius:999px;padding:10px 18px;font-size:14.5px;
+  opacity:0;transform:translateY(8px);transition:all .25s ease;max-width:92vw;text-align:center}
+.toast.show{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hdr">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><rect fill="#0F7B78" width="64" height="64" rx="14"/><g fill="#fff"><rect x="26" y="10" width="12" height="24" rx="4"/><rect x="28" y="6" width="8" height="6" rx="2"/><rect x="18" y="34" width="30" height="12" rx="5"/></g><g fill="#fff" opacity=".75"><circle cx="53" cy="40" r="2.2"/><circle cx="58" cy="36.5" r="1.7"/><circle cx="58" cy="43.5" r="1.7"/></g></svg>
+    <div>
+      <h1>Inhaler Tracker</h1>
+      <p class="tag">doses &middot; puffs &middot; refills</p>
+    </div>
+  </header>
+
+  <div id="persistNote" class="note hidden">Preview mode &mdash; data won&rsquo;t be saved here. Download the file and open it on your phone (or install the APK) to keep your history.</div>
+  <div id="dueBanner"></div>
+
+  <main id="cards"></main>
+
+  <button id="addBtn" class="btn primary big" data-action="add-inhaler">&#65291; Add an inhaler</button>
+
+  <section id="tools" class="tools" aria-label="Data tools"></section>
+
+  <footer class="foot">
+    <p><b>Not medical advice.</b> This app only tracks what you log. Always take the dose your doctor or pharmacist prescribed, and get urgent help if symptoms worsen or your reliever isn&rsquo;t working.</p>
+    <p>Your data stays on this device. Use &ldquo;Back up data&rdquo; before switching phones.</p>
+  </footer>
+</div>
+
+<dialog id="dlgInhaler" class="dlg">
+  <form id="formInhaler" novalidate>
+    <h3 id="dlgInhalerTitle">Add an inhaler</h3>
+    <label class="field">Name / brand
+      <input id="fName" type="text" placeholder="e.g. Ventolin (blue)" autocomplete="off">
+    </label>
+    <div class="grid2">
+      <label class="field">Medication
+        <input id="fMed" type="text" placeholder="e.g. Salbutamol" autocomplete="off">
+      </label>
+      <label class="field">Strength / puff
+        <input id="fStrength" type="text" placeholder="e.g. 100 mcg" autocomplete="off">
+      </label>
+    </div>
+    <div class="grid2">
+      <label class="field">Canister size (puffs)
+        <input id="fTotal" type="number" min="1" inputmode="numeric">
+      </label>
+      <label class="field">Puffs per dose
+        <input id="fPuffsDose" type="number" min="1" inputmode="numeric">
+      </label>
+    </div>
+    <div class="grid2">
+      <label class="field">Doses per day
+        <input id="fDosesDay" type="number" min="0" inputmode="numeric">
+        <small>0 = as needed (reliever)</small>
+      </label>
+      <label class="field">Low warning at
+        <input id="fLow" type="number" min="0" inputmode="numeric">
+        <small>puffs remaining</small>
+      </label>
+    </div>
+    <label class="field">Expiry date (optional)
+      <input id="fExpiry" type="date">
+    </label>
+    <div class="field">Colour
+      <div class="swatches">
+        <label class="sw"><input type="radio" name="fColor" value="#0F7B78"><span style="background:#0F7B78"></span></label>
+        <label class="sw"><input type="radio" name="fColor" value="#2C6E9B"><span style="background:#2C6E9B"></span></label>
+        <label class="sw"><input type="radio" name="fColor" value="#7B4B94"><span style="background:#7B4B94"></span></label>
+        <label class="sw"><input type="radio" name="fColor" value="#C06B2C"><span style="background:#C06B2C"></span></label>
+        <label class="sw"><input type="radio" name="fColor" value="#4E7A3A"><span style="background:#4E7A3A"></span></label>
+        <label class="sw"><input type="radio" name="fColor" value="#4A5A6A"><span style="background:#4A5A6A"></span></label>
+      </div>
+    </div>
+    <p id="fRecalcNote" class="hint">Remaining = canister size &minus; puffs logged since the last &ldquo;New canister&rdquo;. Editing the size recalculates it.</p>
+    <div class="dlg-btns">
+      <button type="button" class="btn ghost" data-action="close-dlg">Cancel</button>
+      <button type="submit" class="btn primary">Save inhaler</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgLog" class="dlg">
+  <form id="formLog" novalidate>
+    <h3 id="lgTitle">Log a dose</h3>
+    <label class="field">Date &amp; time
+      <input id="lgWhen" type="datetime-local">
+    </label>
+    <label class="field">Puffs taken
+      <input id="lgPuffs" type="number" min="1" inputmode="numeric">
+    </label>
+    <label class="field">Note (optional)
+      <input id="lgNote" type="text" placeholder="e.g. before exercise" autocomplete="off">
+    </label>
+    <div class="dlg-btns">
+      <button type="button" class="btn ghost" data-action="close-dlg">Cancel</button>
+      <button type="submit" class="btn primary">Log dose</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgRefill" class="dlg">
+  <form id="formRefill" novalidate>
+    <h3 id="rfTitle">New canister</h3>
+    <p class="hint">Starts a fresh canister from today: the used-puffs counter resets to 0, and your history is kept.</p>
+    <label class="field">New canister size (puffs)
+      <input id="rfSize" type="number" min="1" inputmode="numeric">
+    </label>
+    <label class="field">Note (optional)
+      <input id="rfNote" type="text" placeholder="e.g. picked up from pharmacy" autocomplete="off">
+    </label>
+    <div class="dlg-btns">
+      <button type="button" class="btn ghost" data-action="close-dlg">Cancel</button>
+      <button type="submit" class="btn primary">Start new canister</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgImport" class="dlg">
+  <form id="formImport" novalidate>
+    <h3>Restore from backup</h3>
+    <label class="field">Backup text
+      <textarea id="imText" rows="7" placeholder="Open your inhaler-backup .json file, copy everything, and paste it here."></textarea>
+    </label>
+    <div class="dlg-btns">
+      <button type="button" class="btn ghost" data-action="close-dlg">Cancel</button>
+      <button type="submit" class="btn primary">Restore</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgConfirm" class="dlg">
+  <h3>Are you sure?</h3>
+  <p id="confirmMsg" style="margin:0 0 16px"></p>
+  <div class="dlg-btns">
+    <button type="button" class="btn ghost" data-action="close-dlg">Cancel</button>
+    <button type="button" id="confirmYes" class="btn primary">Yes, continue</button>
+  </div>
+</dialog>
+
+<div id="toastHost" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   Inhaler Tracker — pure logic (no DOM). Unit-tested in Node.
+   Log entry shapes:
+     { id, type:'dose',   ts:<ms>, puffs:<int>, note? }
+     { id, type:'refill', ts:<ms>, size:<int>,  note? }
+   Log is always kept sorted ascending by ts.
+   ============================================================ */
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+function clampInt(v, min, fallback) {
+  var n = parseInt(v, 10);
+  if (isNaN(n) || n < min) return fallback;
+  return n;
+}
+
+/* Local date key "YYYY-MM-DD" for a timestamp */
+function dateKey(ms) {
+  var d = new Date(ms);
+  return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+}
+
+/* "YYYY-MM-DDTHH:MM" for <input type=datetime-local> */
+function toLocalInputValue(ms) {
+  var d = new Date(ms);
+  return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) +
+    'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+}
+
+function fromLocalInputValue(str) {
+  var t = new Date(str).getTime();
+  return isNaN(t) ? null : t;
+}
+
+function sortLog(log) {
+  log.sort(function (a, b) { return a.ts - b.ts; });
+  return log;
+}
+
+/* Puffs used from the current canister (i.e. since the last refill event) */
+function administeredCurrent(inhaler) {
+  var sum = 0;
+  for (var i = 0; i < inhaler.log.length; i++) {
+    var e = inhaler.log[i];
+    if (e.type === 'refill') sum = 0;
+    else sum += (e.puffs || 0);
+  }
+  return sum;
+}
+
+/* Puffs administered across all canisters, all time */
+function administeredAllTime(log) {
+  var sum = 0;
+  for (var i = 0; i < log.length; i++) {
+    if (log[i].type === 'dose') sum += (log[i].puffs || 0);
+  }
+  return sum;
+}
+
+function remainingPuffs(inhaler) {
+  var r = (inhaler.totalPuffs || 0) - administeredCurrent(inhaler);
+  return r < 0 ? 0 : r;
+}
+
+/* Sum of puffs (and count of dose events) on a given local date */
+function usageOnDate(log, key) {
+  var puffs = 0, doses = 0;
+  for (var i = 0; i < log.length; i++) {
+    var e = log[i];
+    if (e.type === 'dose' && dateKey(e.ts) === key) {
+      puffs += (e.puffs || 0);
+      doses += 1;
+    }
+  }
+  return { puffs: puffs, doses: doses };
+}
+
+/* Average daily puff use over a trailing window (calendar-agnostic, simple) */
+function avgDailyPuffs(log, nowMs, windowDays) {
+  var from = nowMs - windowDays * 86400000;
+  var sum = 0, any = false;
+  for (var i = 0; i < log.length; i++) {
+    var e = log[i];
+    if (e.type === 'dose' && e.ts >= from && e.ts <= nowMs) {
+      sum += (e.puffs || 0);
+      any = true;
+    }
+  }
+  if (!any) return 0;
+  return sum / windowDays;
+}
+
+/* Estimated days of supply left.
+   basis 'plan' when a daily schedule exists, otherwise trailing 14-day average. */
+function estDaysLeft(inhaler, nowMs) {
+  var remaining = remainingPuffs(inhaler);
+  var plan = (inhaler.puffsPerDose || 0) * (inhaler.dosesPerDay || 0);
+  if (plan > 0) return { days: remaining / plan, basis: 'plan' };
+  var avg = avgDailyPuffs(inhaler.log, nowMs, 14);
+  if (avg > 0) return { days: remaining / avg, basis: 'avg' };
+  return { days: null, basis: null };
+}
+
+function timeStrToMinutes(hhmm) {
+  var p = String(hhmm).split(':');
+  var h = parseInt(p[0], 10), m = parseInt(p[1], 10);
+  if (isNaN(h) || isNaN(m)) return null;
+  return h * 60 + m;
+}
+
+/* Next occurrence of any reminder time. Returns {time:'HH:MM', atMs} or null. */
+function nextReminder(times, nowMs) {
+  if (!times || !times.length) return null;
+  var d = new Date(nowMs);
+  var startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  var sorted = times.slice().sort(function (a, b) {
+    return timeStrToMinutes(a) - timeStrToMinutes(b);
+  });
+  for (var i = 0; i < sorted.length; i++) {
+    var at = startOfDay + timeStrToMinutes(sorted[i]) * 60000;
+    if (at > nowMs) return { time: sorted[i], atMs: at };
+  }
+  return { time: sorted[0], atMs: startOfDay + 86400000 + timeStrToMinutes(sorted[0]) * 60000 };
+}
+
+/* ---------- CSV export ---------- */
+function csvEscape(v) {
+  var s = String(v == null ? '' : v);
+  if (/[",\r\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+function csvBuild(inhalers) {
+  var rows = [['Inhaler', 'Medication', 'Strength', 'Event', 'Date', 'Time', 'Puffs', 'Canister size', 'Note']];
+  for (var i = 0; i < inhalers.length; i++) {
+    var inh = inhalers[i];
+    var log = sortLog(inh.log.slice());
+    for (var j = 0; j < log.length; j++) {
+      var e = log[j];
+      var d = new Date(e.ts);
+      rows.push([
+        inh.name, inh.medication || '', inh.strength || '',
+        e.type === 'refill' ? 'New canister' : 'Dose',
+        dateKey(e.ts), pad2(d.getHours()) + ':' + pad2(d.getMinutes()),
+        e.type === 'dose' ? (e.puffs || 0) : '',
+        e.type === 'refill' ? (e.size || '') : '',
+        e.note || ''
+      ]);
+    }
+  }
+  return rows.map(function (r) { return r.map(csvEscape).join(','); }).join('\r\n');
+}
+
+/* Days between now and an expiry date string "YYYY-MM-DD" (end of that day). */
+function daysUntilExpiry(expiryStr, nowMs) {
+  if (!expiryStr) return null;
+  var p = String(expiryStr).split('-');
+  if (p.length !== 3) return null;
+  var end = new Date(+p[0], +p[1] - 1, +p[2], 23, 59, 59).getTime();
+  if (isNaN(end)) return null;
+  return Math.ceil((end - nowMs) / 86400000);
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    uid: uid, pad2: pad2, clampInt: clampInt, dateKey: dateKey,
+    toLocalInputValue: toLocalInputValue, fromLocalInputValue: fromLocalInputValue,
+    sortLog: sortLog, administeredCurrent: administeredCurrent,
+    administeredAllTime: administeredAllTime, remainingPuffs: remainingPuffs,
+    usageOnDate: usageOnDate, avgDailyPuffs: avgDailyPuffs, estDaysLeft: estDaysLeft,
+    timeStrToMinutes: timeStrToMinutes, nextReminder: nextReminder,
+    csvEscape: csvEscape, csvBuild: csvBuild, daysUntilExpiry: daysUntilExpiry
+  };
+}
+
+/* ============================================================
+   Inhaler Tracker — UI layer. Runs after logic.js in one script.
+   ============================================================ */
+
+/* ---------- tiny DOM + format helpers ---------- */
+function $(id) { return document.getElementById(id); }
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function fmtTime(ms) {
+  try { return new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+  catch (e) { var d = new Date(ms); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+}
+function fmtDateShort(ms) {
+  try { return new Date(ms).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }); }
+  catch (e) { return dateKey(ms); }
+}
+function relTime(ms) {
+  var diff = Date.now() - ms;
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return Math.floor(diff / 60000) + ' min ago';
+  if (diff < 86400000 && dateKey(ms) === dateKey(Date.now())) return Math.floor(diff / 3600000) + ' h ago';
+  return fmtDateShort(ms) + ', ' + fmtTime(ms);
+}
+function historyHead(key) {
+  var todayK = dateKey(Date.now());
+  var yestK = dateKey(Date.now() - 86400000);
+  if (key === todayK) return 'Today';
+  if (key === yestK) return 'Yesterday';
+  var p = key.split('-');
+  return fmtDateShort(new Date(+p[0], +p[1] - 1, +p[2], 12).getTime());
+}
+function fmtDays(x) {
+  if (x == null) return null;
+  if (x < 1) return '<1';
+  return String(Math.floor(x));
+}
+
+/* ---------- storage (localStorage with in-memory fallback) ---------- */
+var STORE_KEY = 'inhalerTracker_v1';
+var memState = null;
+var persistent = (function () {
+  try {
+    localStorage.setItem('__it_test', '1');
+    localStorage.removeItem('__it_test');
+    return true;
+  } catch (e) { return false; }
+})();
+function loadState() {
+  if (persistent) {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) { /* corrupted -> start fresh */ }
+  }
+  return memState || { v: 1, inhalers: [], fired: {} };
+}
+function persist() {
+  pruneFired();
+  memState = state;
+  if (persistent) {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* full/blocked */ }
+  }
+  syncSystemReminders();
+}
+function pruneFired() {
+  var keep = {};
+  var todayK = dateKey(Date.now());
+  var yestK = dateKey(Date.now() - 86400000);
+  for (var k in state.fired) {
+    if (k.indexOf(todayK) !== -1 || k.indexOf(yestK) !== -1) keep[k] = true;
+  }
+  state.fired = keep;
+}
+
+/* ---------- platform bridge (Android WebView app vs plain browser) ---------- */
+var isAndroidApp = (function () {
+  try { return typeof window.AndroidBridge !== 'undefined' && !!window.AndroidBridge.isAndroid; }
+  catch (e) { return false; }
+})();
+function syncSystemReminders() {
+  if (!isAndroidApp) return;
+  try {
+    var payload = state.inhalers
+      .filter(function (i) { return i.remindersEnabled && i.reminders && i.reminders.length; })
+      .map(function (i) {
+        return { id: i.id, label: i.name, puffs: i.puffsPerDose || 1, times: i.reminders.slice() };
+      });
+    window.AndroidBridge.setReminders(JSON.stringify(payload));
+  } catch (e) { /* bridge unavailable */ }
+}
+function shareOrDownload(filename, text, mime) {
+  if (isAndroidApp) {
+    try { window.AndroidBridge.shareText(filename, text); return; } catch (e) { }
+  }
+  try {
+    var blob = new Blob([text], { type: mime || 'text/plain' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 800);
+  } catch (e) { toast('Could not export on this device'); }
+}
+
+/* ---------- state ---------- */
+var state = loadState();
+if (!state.inhalers) state.inhalers = [];
+if (!state.fired) state.fired = {};
+var openHistory = {};   // inhalerId -> true when history expanded
+var openMenuId = null;  // which card menu is open
+var editingId = null;   // inhaler being edited in the form
+var logTargetId = null; // inhaler for the custom-dose dialog
+var refillTargetId = null;
+var dueQueue = [];      // [{inhalerId, time}]
+var confirmCb = null;
+
+var SWATCHES = ['#0F7B78', '#2C6E9B', '#7B4B94', '#C06B2C', '#4E7A3A', '#4A5A6A'];
+
+function findInh(id) {
+  for (var i = 0; i < state.inhalers.length; i++) if (state.inhalers[i].id === id) return state.inhalers[i];
+  return null;
+}
+
+/* ---------- toasts / beep / notifications ---------- */
+function toast(msg) {
+  var host = $('toastHost');
+  var el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  host.appendChild(el);
+  setTimeout(function () { el.classList.add('show'); }, 10);
+  setTimeout(function () { el.classList.remove('show'); setTimeout(function () { el.remove(); }, 300); }, 2400);
+}
+function beep() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    if (ctx.state === 'suspended') { ctx.resume().catch(function () { }); }
+    var o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = 880;
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.6);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + 0.65);
+    setTimeout(function () { try { ctx.close(); } catch (e) { } }, 900);
+  } catch (e) { }
+}
+function webNotify(title, body) {
+  if (isAndroidApp) return; // the system alarm already notifies
+  try {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    var n = new Notification(title, { body: body, tag: 'inhaler-' + title });
+    n.onclick = function () { try { window.focus(); } catch (e) { } n.close(); };
+  } catch (e) { }
+}
+
+/* ---------- reminder engine (in-page; system alarms handle the APK) ---------- */
+function tickReminders() {
+  var now = Date.now();
+  var nowKey = dateKey(now);
+  state.inhalers.forEach(function (inh) {
+    if (!inh.remindersEnabled || !inh.reminders) return;
+    inh.reminders.forEach(function (t) {
+      var mins = timeStrToMinutes(t);
+      if (mins == null) return;
+      var d = new Date(now);
+      var at = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() + mins * 60000;
+      var k = inh.id + '|' + t + '|' + nowKey;
+      if (now >= at && now - at <= 3 * 60000 && !state.fired[k]) {
+        state.fired[k] = true;
+        persist();
+        dueQueue.push({ inhalerId: inh.id, time: t });
+        webNotify(inh.name + ' — inhaler reminder',
+          'Take ' + (inh.puffsPerDose || 1) + ' puff' + ((inh.puffsPerDose || 1) === 1 ? '' : 's') + ' (' + t + ')');
+        beep();
+        renderBanner();
+      }
+    });
+  });
+}
+
+/* ---------- mutations ---------- */
+function addDose(inh, ts, puffs, note) {
+  inh.log.push({ id: uid(), type: 'dose', ts: ts, puffs: puffs, note: note || '' });
+  sortLog(inh.log);
+  persist();
+}
+function quickLog(inh) {
+  var p = inh.puffsPerDose || 1;
+  addDose(inh, Date.now(), p, '');
+  renderAll();
+  toast('Logged ' + p + ' puff' + (p === 1 ? '' : 's') + ' — ' + inh.name);
+}
+function deleteEntry(inh, entryId) {
+  for (var i = 0; i < inh.log.length; i++) {
+    if (inh.log[i].id === entryId) { inh.log.splice(i, 1); break; }
+  }
+  persist(); renderAll();
+  toast('Entry deleted');
+}
+
+/* ---------- rendering ---------- */
+function warningChips(inh, rem, todayU, exp) {
+  var chips = [];
+  if (rem === 0) chips.push('<span class="chip danger">Empty — start a new canister</span>');
+  else if (rem <= (inh.lowThreshold || 0)) chips.push('<span class="chip warn">Low — ' + rem + ' puffs left, arrange a refill</span>');
+  if (exp != null) {
+    if (exp < 0) chips.push('<span class="chip danger">Expired — replace this inhaler</span>');
+    else if (exp <= 30) chips.push('<span class="chip warn">Expires in ' + exp + ' day' + (exp === 1 ? '' : 's') + '</span>');
+  }
+  if ((inh.dosesPerDay || 0) > 0 && todayU.doses > inh.dosesPerDay) {
+    chips.push('<span class="chip warn">Above the planned schedule today — follow your prescriber\u2019s instructions</span>');
+  }
+  return chips.length ? '<div class="chips">' + chips.join('') + '</div>' : '';
+}
+
+function ringSvg(rem, total, color) {
+  var pct = total > 0 ? rem / total : 0;
+  var C = 2 * Math.PI * 40;
+  var off = C * (1 - pct);
+  var cls = pct > 0.3 ? 'ok' : (pct > 0.1 ? 'warn' : 'danger');
+  return '<div class="ringbox">' +
+    '<svg class="ring ' + cls + '" viewBox="0 0 100 100" role="img" aria-label="' + rem + ' of ' + total + ' puffs left">' +
+    '<circle class="track" cx="50" cy="50" r="40"/>' +
+    '<circle class="meter" cx="50" cy="50" r="40" style="stroke-dasharray:' + C.toFixed(2) + ';stroke-dashoffset:' + off.toFixed(2) + (cls === 'ok' && color ? ';stroke:' + esc(color) : '') + '"/>' +
+    '</svg>' +
+    '<div class="ringnum"><b>' + rem + '</b><span>left</span></div>' +
+    '<div class="ringof">of ' + total + '</div>' +
+    '</div>';
+}
+
+function historyHtml(inh) {
+  if (!inh.log.length) return '<p class="empty-log">No doses logged yet.</p>';
+  var groups = {};
+  var order = [];
+  var sorted = inh.log.slice().sort(function (a, b) { return b.ts - a.ts; });
+  sorted.forEach(function (e) {
+    var k = dateKey(e.ts);
+    if (!groups[k]) { groups[k] = []; order.push(k); }
+    groups[k].push(e);
+  });
+  var html = '';
+  order.forEach(function (k) {
+    var dayPuffs = 0;
+    groups[k].forEach(function (e) { if (e.type === 'dose') dayPuffs += (e.puffs || 0); });
+    html += '<div class="hgroup"><div class="hhead"><span>' + esc(historyHead(k)) + '</span><span>' +
+      (dayPuffs ? dayPuffs + ' puff' + (dayPuffs === 1 ? '' : 's') : '') + '</span></div>';
+    groups[k].forEach(function (e) {
+      if (e.type === 'refill') {
+        html += '<div class="hrow refill"><span class="ht">' + fmtTime(e.ts) + '</span>' +
+          '<span class="hp">New canister · ' + (e.size || '?') + ' puffs</span>' +
+          (e.note ? '<span class="hn">' + esc(e.note) + '</span>' : '') +
+          '<button class="hx" data-action="del-entry" data-id="' + inh.id + '" data-entry="' + e.id + '" data-refill="1" aria-label="Delete entry">\u00d7</button></div>';
+      } else {
+        html += '<div class="hrow"><span class="ht">' + fmtTime(e.ts) + '</span>' +
+          '<span class="hp">' + (e.puffs || 0) + ' puff' + ((e.puffs || 0) === 1 ? '' : 's') + '</span>' +
+          (e.note ? '<span class="hn">' + esc(e.note) + '</span>' : '') +
+          '<button class="hx" data-action="del-entry" data-id="' + inh.id + '" data-entry="' + e.id + '" aria-label="Delete entry">\u00d7</button></div>';
+      }
+    });
+    html += '</div>';
+  });
+  return html;
+}
+
+function cardHtml(inh) {
+  var now = Date.now();
+  var rem = remainingPuffs(inh);
+  var admin = administeredCurrent(inh);
+  var all = administeredAllTime(inh.log);
+  var todayU = usageOnDate(inh.log, dateKey(now));
+  var est = estDaysLeft(inh, now);
+  var exp = daysUntilExpiry(inh.expiry, now);
+  var lastDose = null;
+  for (var i = inh.log.length - 1; i >= 0; i--) {
+    if (inh.log[i].type === 'dose') { lastDose = inh.log[i].ts; break; }
+  }
+  var nr = (inh.remindersEnabled && inh.reminders && inh.reminders.length)
+    ? nextReminder(inh.reminders, now) : null;
+  var planStr = (inh.dosesPerDay || 0) > 0
+    ? (inh.puffsPerDose + ' puff' + (inh.puffsPerDose === 1 ? '' : 's') + ' \u00d7 ' + inh.dosesPerDay + '/day')
+    : (inh.puffsPerDose + ' puff' + (inh.puffsPerDose === 1 ? '' : 's') + ', as needed');
+  var estStr = est.days == null ? '\u2014'
+    : '\u2248 ' + fmtDays(est.days) + ' days ' + (est.basis === 'plan' ? '(planned use)' : '(recent average)');
+  var doseCount = inh.log.filter(function (e) { return e.type === 'dose'; }).length;
+
+  var timeChips = (inh.reminders || []).slice().sort(function (a, b) {
+    return timeStrToMinutes(a) - timeStrToMinutes(b);
+  }).map(function (t) {
+    return '<span class="tchip">' + esc(t) +
+      '<button data-action="del-time" data-id="' + inh.id + '" data-time="' + esc(t) + '" aria-label="Remove ' + esc(t) + '">\u00d7</button></span>';
+  }).join('');
+
+  return '<article class="card" style="--ac:' + esc(inh.color || SWATCHES[0]) + '">' +
+    '<div class="card-top">' +
+      '<span class="dot" aria-hidden="true"></span>' +
+      '<div class="card-title"><h2>' + esc(inh.name) + '</h2>' +
+        '<p>' + esc([inh.medication, inh.strength].filter(Boolean).join(' \u00b7 ') || planStr) + '</p></div>' +
+      '<div class="menu-wrap">' +
+        '<button class="iconbtn" data-action="menu" data-id="' + inh.id + '" aria-label="Options for ' + esc(inh.name) + '">\u22ee</button>' +
+        (openMenuId === inh.id
+          ? '<div class="menu">' +
+            '<button data-action="edit-inhaler" data-id="' + inh.id + '">Edit details</button>' +
+            '<button data-action="refill" data-id="' + inh.id + '">New canister\u2026</button>' +
+            '<button class="mdanger" data-action="delete-inhaler" data-id="' + inh.id + '">Delete inhaler</button>' +
+            '</div>'
+          : '') +
+      '</div>' +
+    '</div>' +
+    '<div class="card-mid">' +
+      ringSvg(rem, inh.totalPuffs || 0, inh.color) +
+      '<dl class="stats">' +
+        '<div><dt>Plan</dt><dd>' + esc(planStr) + '</dd></div>' +
+        '<div><dt>Today</dt><dd>' + todayU.puffs + ' puff' + (todayU.puffs === 1 ? '' : 's') +
+          ((inh.dosesPerDay || 0) > 0 ? ' \u00b7 ' + todayU.doses + ' of ' + inh.dosesPerDay + ' doses' : '') + '</dd></div>' +
+        '<div><dt>Last dose</dt><dd>' + (lastDose ? esc(relTime(lastDose)) : '\u2014') + '</dd></div>' +
+        '<div><dt>Supply</dt><dd>' + estStr + '</dd></div>' +
+        '<div><dt>Used</dt><dd>' + admin + ' this canister \u00b7 ' + all + ' all-time</dd></div>' +
+      '</dl>' +
+    '</div>' +
+    warningChips(inh, rem, todayU, exp) +
+    '<div class="card-actions">' +
+      '<button class="btn primary" data-action="log-quick" data-id="' + inh.id + '">Log dose \u00b7 +' + (inh.puffsPerDose || 1) + '</button>' +
+      '<button class="btn ghost" data-action="log-custom" data-id="' + inh.id + '">Other time\u2026</button>' +
+    '</div>' +
+    '<div class="rem-block">' +
+      '<label class="switch"><input type="checkbox" data-action="toggle-rem" data-id="' + inh.id + '"' + (inh.remindersEnabled ? ' checked' : '') + '><span></span>Reminders</label>' +
+      (inh.remindersEnabled
+        ? '<div class="times">' + timeChips +
+          '<span class="addtime"><input type="time" id="time-' + inh.id + '" aria-label="New reminder time">' +
+          '<button class="btn mini" data-action="add-time" data-id="' + inh.id + '">Add</button></span></div>' +
+          (nr ? '<p class="nextrem">Next: ' + esc(nr.time) + ' ' + (dateKey(nr.atMs) === dateKey(now) ? 'today' : 'tomorrow') + '</p>'
+              : '<p class="nextrem">Add a time above to be reminded.</p>')
+        : '') +
+    '</div>' +
+    '<button class="hist-toggle" data-action="toggle-history" data-id="' + inh.id + '" aria-expanded="' + (openHistory[inh.id] ? 'true' : 'false') + '">' +
+      (openHistory[inh.id] ? 'Hide history' : 'History') + ' \u00b7 ' + doseCount + ' dose' + (doseCount === 1 ? '' : 's') +
+    '</button>' +
+    (openHistory[inh.id] ? '<div class="history">' + historyHtml(inh) + '</div>' : '') +
+  '</article>';
+}
+
+function renderCards() {
+  var host = $('cards');
+  if (!state.inhalers.length) {
+    host.innerHTML = '<div class="empty">' +
+      '<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="26" y="8" width="12" height="26" rx="4"/><rect x="28" y="4" width="8" height="6" rx="2"/><path d="M22 34h26a4 4 0 0 1 4 4v6a4 4 0 0 1-4 4H22a4 4 0 0 1-4-4v-6a4 4 0 0 1 4-4z"/><circle cx="56" cy="41" r="2"/><circle cx="61" cy="38" r="1.6"/><circle cx="61" cy="44" r="1.6"/></svg>' +
+      '<h2>No inhalers yet</h2>' +
+      '<p>Add your inhaler with its canister size and prescribed dose, then log each use with one tap.</p>' +
+      '</div>';
+    return;
+  }
+  host.innerHTML = state.inhalers.map(cardHtml).join('');
+}
+
+function renderBanner() {
+  var host = $('dueBanner');
+  if (!dueQueue.length) { host.innerHTML = ''; return; }
+  var d = dueQueue[dueQueue.length - 1];
+  var inh = findInh(d.inhalerId);
+  if (!inh) { dueQueue.pop(); host.innerHTML = ''; return; }
+  var p = inh.puffsPerDose || 1;
+  host.innerHTML = '<div class="due">' +
+    '<div class="due-txt"><b>' + esc(inh.name) + '</b> \u2014 time for your dose (' + esc(d.time) + '). ' +
+    'Take ' + p + ' puff' + (p === 1 ? '' : 's') + '.</div>' +
+    '<div class="due-btns">' +
+    '<button class="btn primary" data-action="due-log" data-id="' + inh.id + '">Log +' + p + '</button>' +
+    '<button class="btn ghost" data-action="due-dismiss">Dismiss</button>' +
+    '</div></div>';
+}
+
+function renderTools() {
+  var host = $('tools');
+  var html = '';
+  if (!persistent) {
+    $('persistNote').classList.remove('hidden');
+  }
+  if (!isAndroidApp && 'Notification' in window && Notification.permission === 'default') {
+    html += '<button class="btn ghost" data-action="notif-enable">Enable alert notifications</button>';
+  }
+  html += '<button class="btn ghost" data-action="test-alert">Test alert</button>' +
+    '<button class="btn ghost" data-action="export-csv">Export CSV</button>' +
+    '<button class="btn ghost" data-action="backup">Back up data</button>' +
+    '<button class="btn ghost" data-action="import-open">Restore\u2026</button>';
+  host.innerHTML = html;
+}
+
+function renderAll() {
+  renderCards();
+  renderBanner();
+  renderTools();
+}
+
+/* ---------- dialogs ---------- */
+function openDlg(dlg) { try { dlg.showModal(); } catch (e) { dlg.setAttribute('open', ''); } }
+function closeDlg(dlg) { try { dlg.close(); } catch (e) { dlg.removeAttribute('open'); } }
+
+function showConfirm(msg, danger, cb) {
+  $('confirmMsg').textContent = msg;
+  $('confirmYes').className = 'btn ' + (danger ? 'dangerbtn' : 'primary');
+  confirmCb = cb;
+  openDlg($('dlgConfirm'));
+}
+
+function openInhalerForm(inh) {
+  editingId = inh ? inh.id : null;
+  $('dlgInhalerTitle').textContent = inh ? 'Edit inhaler' : 'Add an inhaler';
+  $('fName').value = inh ? inh.name : '';
+  $('fMed').value = inh ? (inh.medication || '') : '';
+  $('fStrength').value = inh ? (inh.strength || '') : '';
+  $('fTotal').value = inh ? inh.totalPuffs : 200;
+  $('fPuffsDose').value = inh ? inh.puffsPerDose : 2;
+  $('fDosesDay').value = inh ? inh.dosesPerDay : 2;
+  $('fLow').value = inh ? inh.lowThreshold : 20;
+  $('fExpiry').value = inh ? (inh.expiry || '') : '';
+  var color = inh ? (inh.color || SWATCHES[0]) : SWATCHES[0];
+  var radios = document.querySelectorAll('input[name="fColor"]');
+  for (var i = 0; i < radios.length; i++) radios[i].checked = (radios[i].value === color);
+  $('fRecalcNote').style.display = inh ? 'block' : 'none';
+  openDlg($('dlgInhaler'));
+  $('fName').focus();
+}
+
+function openLogForm(inh) {
+  logTargetId = inh.id;
+  $('lgTitle').textContent = 'Log a dose \u2014 ' + inh.name;
+  var w = $('lgWhen');
+  w.value = toLocalInputValue(Date.now());
+  w.max = toLocalInputValue(Date.now() + 60000);
+  $('lgPuffs').value = inh.puffsPerDose || 1;
+  $('lgNote').value = '';
+  openDlg($('dlgLog'));
+}
+
+function openRefillForm(inh) {
+  refillTargetId = inh.id;
+  $('rfTitle').textContent = 'New canister \u2014 ' + inh.name;
+  $('rfSize').value = inh.totalPuffs || 200;
+  $('rfNote').value = '';
+  openDlg($('dlgRefill'));
+}
+
+/* ---------- actions ---------- */
+document.addEventListener('click', function (ev) {
+  var btn = ev.target.closest('[data-action]');
+  var menuWrap = ev.target.closest('.menu-wrap');
+  if (!menuWrap && openMenuId) { openMenuId = null; renderCards(); }
+  if (!btn) return;
+  var action = btn.getAttribute('data-action');
+  var id = btn.getAttribute('data-id');
+  var inh = id ? findInh(id) : null;
+
+  switch (action) {
+    case 'add-inhaler': openInhalerForm(null); break;
+    case 'edit-inhaler': openMenuId = null; if (inh) openInhalerForm(inh); break;
+    case 'menu':
+      openMenuId = (openMenuId === id) ? null : id;
+      renderCards();
+      break;
+    case 'delete-inhaler':
+      openMenuId = null; renderCards();
+      if (!inh) break;
+      showConfirm('Delete "' + inh.name + '" and its whole history? This cannot be undone.', true, function () {
+        state.inhalers = state.inhalers.filter(function (x) { return x.id !== id; });
+        persist(); renderAll(); toast('Inhaler deleted');
+      });
+      break;
+    case 'refill': openMenuId = null; if (inh) openRefillForm(inh); break;
+    case 'log-quick': if (inh) quickLog(inh); break;
+    case 'log-custom': if (inh) openLogForm(inh); break;
+    case 'toggle-history':
+      openHistory[id] = !openHistory[id];
+      renderCards();
+      break;
+    case 'del-entry':
+      if (!inh) break;
+      var entryId = btn.getAttribute('data-entry');
+      if (btn.getAttribute('data-refill')) {
+        showConfirm('Delete this "new canister" entry? Remaining puffs will be recalculated.', true, function () {
+          deleteEntry(inh, entryId);
+        });
+      } else {
+        deleteEntry(inh, entryId);
+      }
+      break;
+    case 'add-time':
+      if (!inh) break;
+      var input = $('time-' + id);
+      var v = input && input.value;
+      if (!v) { toast('Pick a time first'); break; }
+      inh.reminders = inh.reminders || [];
+      if (inh.reminders.indexOf(v) !== -1) { toast('That time is already set'); break; }
+      inh.reminders.push(v);
+      persist(); renderAll();
+      maybeAskNotifPermission();
+      break;
+    case 'del-time':
+      if (!inh) break;
+      var tv = btn.getAttribute('data-time');
+      inh.reminders = (inh.reminders || []).filter(function (x) { return x !== tv; });
+      persist(); renderAll();
+      break;
+    case 'due-log':
+      if (inh) { quickLog(inh); }
+      dueQueue.pop(); renderBanner();
+      break;
+    case 'due-dismiss':
+      dueQueue.pop(); renderBanner();
+      break;
+    case 'notif-enable':
+      try {
+        Notification.requestPermission().then(function () { renderTools(); });
+      } catch (e) { toast('Notifications are not available here'); }
+      break;
+    case 'test-alert':
+      beep();
+      webNotify('Inhaler Tracker', 'Test alert — this is how reminders will look.');
+      toast(isAndroidApp
+        ? 'System reminders are scheduled by Android — you\u2019re set.'
+        : 'Test alert sent' + (('Notification' in window) && Notification.permission === 'granted' ? '.' : ' (enable notifications for pop-ups).'));
+      break;
+    case 'export-csv':
+      if (!state.inhalers.length) { toast('Nothing to export yet'); break; }
+      shareOrDownload('inhaler-log-' + dateKey(Date.now()) + '.csv', csvBuild(state.inhalers), 'text/csv');
+      break;
+    case 'backup':
+      shareOrDownload('inhaler-backup-' + dateKey(Date.now()) + '.json', JSON.stringify(state, null, 2), 'application/json');
+      break;
+    case 'import-open':
+      $('imText').value = '';
+      openDlg($('dlgImport'));
+      break;
+    case 'close-dlg':
+      var dlg = btn.closest('dialog');
+      if (dlg) closeDlg(dlg);
+      break;
+  }
+});
+
+/* change events (the reminders on/off switch) */
+document.addEventListener('change', function (ev) {
+  var el = ev.target.closest('[data-action="toggle-rem"]');
+  if (!el) return;
+  var inh = findInh(el.getAttribute('data-id'));
+  if (!inh) return;
+  inh.remindersEnabled = !!el.checked;
+  persist(); renderAll();
+  if (inh.remindersEnabled) maybeAskNotifPermission();
+});
+
+function maybeAskNotifPermission() {
+  if (isAndroidApp) return;
+  try {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(function () { renderTools(); });
+    }
+  } catch (e) { }
+}
+
+/* ---------- form submissions ---------- */
+$('formInhaler').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  var name = $('fName').value.trim();
+  if (!name) { toast('Give the inhaler a name'); $('fName').focus(); return; }
+  var total = clampInt($('fTotal').value, 1, 0);
+  if (!total) { toast('Canister size must be at least 1 puff'); $('fTotal').focus(); return; }
+  var puffsDose = clampInt($('fPuffsDose').value, 1, 0);
+  if (!puffsDose) { toast('Puffs per dose must be at least 1'); $('fPuffsDose').focus(); return; }
+  var dosesDay = clampInt($('fDosesDay').value, 0, 0);
+  var low = clampInt($('fLow').value, 0, 20);
+  var colorEl = document.querySelector('input[name="fColor"]:checked');
+  var color = colorEl ? colorEl.value : SWATCHES[0];
+  var expiry = $('fExpiry').value || '';
+
+  if (editingId) {
+    var inh = findInh(editingId);
+    if (inh) {
+      inh.name = name; inh.medication = $('fMed').value.trim();
+      inh.strength = $('fStrength').value.trim();
+      inh.totalPuffs = total; inh.puffsPerDose = puffsDose;
+      inh.dosesPerDay = dosesDay; inh.lowThreshold = low;
+      inh.expiry = expiry; inh.color = color;
+    }
+    toast('Saved');
+  } else {
+    state.inhalers.push({
+      id: uid(), name: name,
+      medication: $('fMed').value.trim(), strength: $('fStrength').value.trim(),
+      totalPuffs: total, puffsPerDose: puffsDose, dosesPerDay: dosesDay,
+      lowThreshold: low, expiry: expiry, color: color,
+      reminders: [], remindersEnabled: false, log: [],
+      createdAt: Date.now()
+    });
+    toast('Inhaler added');
+  }
+  persist(); renderAll();
+  closeDlg($('dlgInhaler'));
+});
+
+$('formLog').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  var inh = findInh(logTargetId);
+  if (!inh) { closeDlg($('dlgLog')); return; }
+  var ts = fromLocalInputValue($('lgWhen').value);
+  if (ts == null) { toast('Pick a valid date and time'); return; }
+  var nowMs = Date.now();
+  if (ts > nowMs + 60000) { toast('That time is in the future'); return; }
+  /* datetime-local has minute precision; a "now" dose must sort after any
+     refill made seconds earlier in the same minute */
+  if (ts <= nowMs && nowMs - ts < 60000) ts = nowMs;
+  var puffs = clampInt($('lgPuffs').value, 1, 0);
+  if (!puffs) { toast('Puffs must be at least 1'); return; }
+  addDose(inh, ts, puffs, $('lgNote').value.trim());
+  renderAll();
+  closeDlg($('dlgLog'));
+  toast('Dose logged');
+});
+
+$('formRefill').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  var inh = findInh(refillTargetId);
+  if (!inh) { closeDlg($('dlgRefill')); return; }
+  var size = clampInt($('rfSize').value, 1, 0);
+  if (!size) { toast('Canister size must be at least 1 puff'); return; }
+  inh.log.push({ id: uid(), type: 'refill', ts: Date.now(), size: size, note: $('rfNote').value.trim() });
+  sortLog(inh.log);
+  inh.totalPuffs = size;
+  persist(); renderAll();
+  closeDlg($('dlgRefill'));
+  toast('New canister started — counter reset to ' + size);
+});
+
+$('formImport').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  var txt = $('imText').value.trim();
+  if (!txt) { toast('Paste your backup text first'); return; }
+  var data;
+  try { data = JSON.parse(txt); } catch (e) { toast('That doesn\u2019t look like a valid backup'); return; }
+  if (!data || !Array.isArray(data.inhalers)) { toast('That doesn\u2019t look like a valid backup'); return; }
+  closeDlg($('dlgImport'));
+  showConfirm('Replace everything in this app with the backup (' + data.inhalers.length + ' inhaler' + (data.inhalers.length === 1 ? '' : 's') + ')?', true, function () {
+    data.inhalers.forEach(function (i) {
+      i.log = Array.isArray(i.log) ? sortLog(i.log) : [];
+      i.reminders = Array.isArray(i.reminders) ? i.reminders : [];
+    });
+    state = { v: 1, inhalers: data.inhalers, fired: {} };
+    persist(); renderAll();
+    toast('Backup restored');
+  });
+});
+
+$('confirmYes').addEventListener('click', function () {
+  closeDlg($('dlgConfirm'));
+  var cb = confirmCb; confirmCb = null;
+  if (cb) cb();
+});
+
+/* close dialogs when clicking the backdrop */
+['dlgInhaler', 'dlgLog', 'dlgRefill', 'dlgImport', 'dlgConfirm'].forEach(function (id) {
+  var dlg = $(id);
+  dlg.addEventListener('click', function (ev) {
+    if (ev.target === dlg) closeDlg(dlg);
+  });
+});
+
+/* ---------- boot ---------- */
+state.inhalers.forEach(function (i) { i.log = Array.isArray(i.log) ? sortLog(i.log) : []; });
+renderAll();
+tickReminders();
+setInterval(tickReminders, 20000);
+document.addEventListener('visibilitychange', function () {
+  if (!document.hidden) { tickReminders(); renderCards(); }
+});
+if (isAndroidApp) syncSystemReminders();
+
+</script>
+</body>
+</html>
